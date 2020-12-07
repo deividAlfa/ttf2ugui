@@ -48,7 +48,7 @@ static float fontSize = 0;
 static int dpi = 0;
 static int bpp = 1;
 static int minChar = 32;
-static int maxChar = 126;
+static int maxChar = 127;
 
 /*
  * "draw" a pixel using ansi escape sequences.
@@ -478,9 +478,15 @@ static struct option longopts[] = {
 
 static void usage()
 {
-  fprintf(stderr, "ttf2ugui {--show text|--dump} --font=fontfile [--dpi=displaydpi] --size=fontsize [--bpp=bitsperpixel]\n");
-  fprintf(stderr, "If --dpi is not given, font size is assumed to be pixels.\n");
-  fprintf(stderr, "Bits per pixel must be 1 or 8. Default is 1.\n");
+  fprintf(stderr, "\nttf2ugui {--show <\"text\"> | --dump} --font=<fontfile> [--dpi=<displaydpi>] --size=<fontsize> [--bpp=<bitsperpixel>] [--minchar=<num>] [--maxchar=<num>]\n\n");
+  fprintf(stderr, "\t--show:\tDisplays how uGUI would render the text <text> with the selected font options\n");
+  fprintf(stderr, "\t--dump:\tCreates uGUI C source and header files containing the selected font data\n");
+  fprintf(stderr, "\t--dpi:\tIf --dpi is not given, font size is assumed to be pixels\n");
+  fprintf(stderr, "\t--bpp:\tBits per pixel must be 1 or 8. Default is 1\n");
+  fprintf(stderr, "\t<num>: \tASCII numbers in decimal notation (0-255). Default 32-127\n\n");
+  fprintf(stderr, "\tExamples:\n");
+  fprintf(stderr, "\tttf2ugui.exe --dump --font=Arial.ttf --size=16 --minchar=32 --maxchar=48\n");
+  fprintf(stderr, "\tttf2ugui.exe --show \"Example\" --font=Arial.ttf --size=16\n");
 
 }
 
