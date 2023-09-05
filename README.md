@@ -20,34 +20,39 @@ Please remember to respect font copyrights when converting.<br>
 Examples:<br>
 
 ##### Convert font in Luna.ttf to 14 point size bitmap font for 140 DPI display:<br>
-
->./ttf2ugui --font=Luna.ttf --dpi=140 --size=14 --dump
+```./ttf2ugui --font=Luna.ttf --dpi=140 --size=14 --dump```
 
 Results are in Luna.c and Luna.h, just compile the .c and include .h in your uGUI application.<br><br>
 
 ##### Show ascii art of same font:<br>
->./ttf2ugui --font=Luna.ttf --dpi=140 --size=14 --show="aString"
+```./ttf2ugui --font=Luna.ttf --dpi=140 --size=14 --show="aString"```
 
 ##### If you want to generate 8BPP fonts ( so you get anti alliased fonts ) use:<br>
->./ttf2ugui --font=Luna.ttf --dpi=140 --size=14 --show="aString" --bpp=8
+```./ttf2ugui --font=Luna.ttf --dpi=140 --size=14 --show="aString" --bpp=8```
 
-##### On MacOS, use full path to the font ttf file, e.g.<br>
->./ttf2ugui --font=/System/Library/Fonts/Supplemental/Arial.ttf --dpi=140 --size=14
+##### If the font file is not in the same directory, use full path to the font otf/ttf file, e.g.<br>
+###### MacOS
+
+```./ttf2ugui --font=/System/Library/Fonts/Supplemental/Arial.ttf --dpi=140 --size=14```
+
+###### Windows
+
+```./ttf2ugui --font=C:\Windows\Fonts\Arial.ttf --dpi=140 --size=14```
 
 <br>
 
 #### You can specify chars to be generated:
 ##### Space and numbers:<br>
->./ttf2ugui --dump --font=arial.ttf --size=14 --chars=32,48-57
+```./ttf2ugui --dump --font=arial.ttf --size=14 --chars=32,48-57```
 
 ##### Space, uppercase and numbers<br>
->./ttf2ugui --dump --font=arial.ttf --size=14 --chars=32,48-57,65-90
+```./ttf2ugui --dump --font=arial.ttf --size=14 --chars=32,48-57,65-90```
 
 ##### Standard ASCII and cyrillic<br>
->./ttf2ugui --dump --font=arial.ttf --size=14 --chars=32-126,1042-1103
+```./ttf2ugui --dump --font=arial.ttf --size=14 --chars=32-126,1042-1103```
 
 ##### Standard ASCII, © symbol and cyrillic<br>
->./ttf2ugui --dump --font=arial.ttf --size=14 --chars=32-126,169,1042-1103
+```./ttf2ugui --dump --font=arial.ttf --size=14 --chars=32-126,169,1042-1103```
 
 "--chars" use Unicode or ASCII codes.<br>
 <br>
