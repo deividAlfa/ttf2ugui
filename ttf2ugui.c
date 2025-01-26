@@ -62,19 +62,18 @@ static int enable_widths = 1;
 char     *charArg = "32-126";  // Default, use 32-126 range
 uint16_t chars[64*1024];
 uint16_t charCount;
-uint8_t  offsets[64*1024*2];
-uint16_t offsetCount;
+uint8_t  offset_data[64*1024];
+uint16_t offset_size;
 
 // Same as uGUI's UG_FONT_DATA, but without const qualifiers, so we can use ram pointers. Only for ttf2ugui
 typedef struct
 {
-   FONT_TYPE  font_type;
-   UG_U8      is_old_font;
    UG_U8      char_width;
    UG_U8      char_height;
-   UG_U16     bytes_per_char;
    UG_U16     number_of_chars;
-   UG_U16     number_of_offsets;
+   UG_U16     offset_size;
+   UG_U16     bytes_per_char;
+   UG_U8      flags;
    UG_U8      * widths;
    UG_U8      * offsets;
    UG_U8      * data;
@@ -114,6 +113,7 @@ static void drawPixel(UG_S16 x, UG_S16 y, UG_COLOR col)
 void parse_chars(char *s)
 {
     uint16_t l, r;
+    uint8_t * o = offset_data;
 
     /*
      * Make sure to clear the flag and bitmap in case more than one subset is
@@ -159,27 +159,31 @@ void parse_chars(char *s)
     /*
     * Compute char ranges
     */
+    offset_size=0;
     for (uint16_t ch=0; ch<charCount; ){
-      offsets[offsetCount*2]=chars[ch]>>8;
-      offsets[(offsetCount*2)+1]=chars[ch]&0xFF;
-      offsetCount++;
-      ch++;  
-      if(chars[ch]==chars[ch-1]+1){
-        offsets[(offsetCount-1)*2] |= 0x80;
-        //printf("Offset Range Start: %u\n",offsets[offsetCount-1]&0x7FFF);    
-        while(ch<charCount-1 && chars[ch]+1==chars[ch+1]){      //Skip consecutive chars
+      *o++ = 0;
+      *o++ = chars[ch]>>8;
+      *o++ = chars[ch]&0xFF;
+      offset_size+=3;
+      ch++;
+      if(chars[ch-1]+1==chars[ch]){
+        *(o-3) = 1;
+        printf("Offset Range Start: '%c'\n",chars[ch-1]);
+        while(ch<charCount && chars[ch]==chars[ch+1]-1){      //Skip consecutive chars
           ch++;
         }
-        offsets[offsetCount*2]=chars[ch]>>8;
-        offsets[(offsetCount*2)+1]=chars[ch]&0xFF;
-        offsetCount++;
-        ch++;  
-        //printf("Offset Range End: %u\n",offsets[offsetCount-1]&0x7FFF);
+        *o++=chars[ch]>>8;
+        *o++=chars[ch]&0xFF;
+        offset_size+=2;
+        printf("Offset Range End: '%c'\n",chars[ch]);
+        ch++;
       }
       else{
-        //printf("Offset Single char: %u\n",offsets[offsetCount-1]);    
+        printf("Offset Single char: '%c'\n",chars[ch-1]);    
       }
     }
+    *o = 0xFF;
+    offset_size++;
 }
 
 /*
@@ -246,7 +250,7 @@ static void dumpFont(UG_FONT_DATA_RAM * font, const char* fontFile, float fontSi
   int ch;
   int current;
   int b;
-  char fontName[80];
+  char fontName[128];
   char fileNameBuf[80];
   const char* baseName;
   char outFileName[80];
@@ -283,8 +287,8 @@ static void dumpFont(UG_FONT_DATA_RAM * font, const char* fontFile, float fontSi
     *ptr = '\0';
 
 
-  sprintf(fontName, "%s_%dX%d", baseName, font->char_width, font->char_height);
-  sprintf(outFileName, "%s_%dX%d.c", baseName, font->char_width, font->char_height);
+  sprintf(fontName, "%s_%uX%u", baseName, font->char_width, font->char_height);
+  sprintf(outFileName, "%s_%uX%u.c", baseName, font->char_width, font->char_height);
 
 
   out = fopen(outFileName, "w");
@@ -336,18 +340,17 @@ static void dumpFont(UG_FONT_DATA_RAM * font, const char* fontFile, float fontSi
   fprintf(out, "UG_FONT FONT_%s[] = {\n", fontName );
   
   // Print Header
-  fprintf(out, "  // BPP, Width, Height, Chars, Offsets, Bytes per char, Widths presence bit\n");
-  fprintf(out, "  0x%02X,0x%02X,0x%02X,0x%02X,0x%02X,0x%02X,0x%02X,0x%02X,0x%02X,0x%02X,\n",
-          font->font_type,
+  fprintf(out, "  // Width, Height, Chars, Offset size, Bytes per char, Flags\n");
+  fprintf(out, "  0x%02X,0x%02X,0x%02X,0x%02X,0x%02X,0x%02X,0x%02X,0x%02X,0x%02X,\n",
           font->char_width,
           font->char_height,
           (font->number_of_chars>>8)&0xFF,
           font->number_of_chars&0xFF,
-          (font->number_of_offsets>>8)&0xFF,
-          font->number_of_offsets&0xFF,
-          (font->bytes_per_char>>8)&0xFF,          
+          (font->offset_size>>8)&0xFF,
+          font->offset_size&0xFF,
+          (font->bytes_per_char>>8)&0xFF,
           font->bytes_per_char&0xFF,
-          enable_widths);
+          (enable_widths ? font->flags|0x40 : font->flags));
       
       
   // Print char widths if enabled
@@ -372,8 +375,9 @@ static void dumpFont(UG_FONT_DATA_RAM * font, const char* fontFile, float fontSi
   // Print char offsets
   fprintf(out, "// Offsets\n  ");
  
+  fprintf(stdout, "Offset size: %u\n", offset_size);
   newline=0;
-  for(uint16_t t=0;t<offsetCount*2;){
+  for(uint16_t t=0;t<offset_size;){
     newline=0;  
     fprintf(out, "0x%02X,", font->offsets[t++]);
     if(t && t%10==0){
@@ -529,13 +533,13 @@ static UG_FONT_DATA_RAM *convertFont(const char *font, int dpi, float fontSize,i
 
   bytesPerChar = bytesPerRow * maxHeight;
   newFont.data = calloc(1, bytesPerChar * charCount);
-  newFont.number_of_offsets = offsetCount;
-  newFont.offsets = offsets;
+  newFont.offset_size = offset_size;
+  newFont.offsets = offset_data;
   
   switch(bitsPerPixel)
   {
-        case 1: newFont.font_type = FONT_TYPE_1BPP; break;
-        case 8: newFont.font_type = FONT_TYPE_8BPP; break;
+        case 1: newFont.flags = FONT_TYPE_1BPP; break;
+        case 8: newFont.flags = FONT_TYPE_8BPP; break;
   }
 
   newFont.char_width  = maxWidth;
