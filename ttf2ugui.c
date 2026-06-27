@@ -590,7 +590,12 @@ static UG_FONT_DATA_RAM *convertFont(const char *font, int dpi, float fontSize,i
 
         int xpos, ypos,ind;
 
-        xpos = j + (face->glyph->bitmap_left / bpp_mul);
+        // avoid offsetting with larger monospaced fonts
+        if ((face->glyph->bitmap_left + face->glyph->bitmap.width) / bpp_mul > maxWidth) {
+            xpos = j + (maxWidth - (face->glyph->bitmap.width / bpp_mul)); 
+        } else {
+            xpos = j + (face->glyph->bitmap_left / bpp_mul);
+        }
         ypos = (maxAscent/bpp_mul) + i - (face->glyph->bitmap_top / bpp_mul);
         if (xpos < 0 || xpos >= maxWidth || ypos < 0 || ypos >= maxHeight)
             continue;
